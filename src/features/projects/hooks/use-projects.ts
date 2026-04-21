@@ -4,6 +4,10 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 
+export const useProject = (projectId: Id<"projects">) => {
+  return useQuery(api.projects.getById, { id: projectId });
+};
+
 export const useProjects = () => {
   const projects = useQuery(api.projects.get);
   return projects;
@@ -34,6 +38,44 @@ export const useCreateProject = () => {
           ...existingProjects,
           newProject,
         ]);
+      }
+    },
+  );
+};
+
+export const useRenameProject = (projectId: Id<"projects">) => {
+  return useMutation(api.projects.rename).withOptimisticUpdate(
+    (localStore, args) => {
+      // Update single-project cache (used by editor title, detail views)
+      const existingProject = localStore.getQuery(api.projects.getById, {
+        id: projectId,
+      });
+
+      if (existingProject !== undefined && existingProject !== null) {
+        localStore.setQuery(
+          api.projects.getById,
+          { id: projectId },
+          {
+            ...existingProject,
+            name: args.name,
+            updatedAt: Date.now(),
+          },
+        );
+      }
+
+      // Update all-projects cache (used by sidebar, project list)
+      const existingProjects = localStore.getQuery(api.projects.get);
+
+      if (existingProjects !== undefined) {
+        localStore.setQuery(
+          api.projects.get,
+          {},
+          existingProjects.map((project) =>
+            project._id === projectId
+              ? { ...project, name: args.name, updatedAt: Date.now() }
+              : project,
+          ),
+        );
       }
     },
   );
