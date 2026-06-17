@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FileBreadcrumbs VS Code Style</title>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --workbench: #252526;
+      --editor: #1e1e1e;
+      --line: #2d2d30;
+      --text: #cccccc;
+      --muted: #9d9d9d;
+      --active: #ffffff;
+      --blue: #3794ff;
+      --green: #89d185;
+      --warn: #d7ba7d;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+      --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+      --sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    .hero {
+      background: var(--workbench);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: 0.2px;
+      color: var(--active);
+    }
+
+    .hero p {
+      margin: 10px 0 0;
+      color: #b7b7b7;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1.15fr 1fr;
+    }
+
+    .card {
+      background: var(--workbench);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      background: #2a2d2e;
+      border-bottom: 1px solid var(--line);
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .code {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: var(--mono);
+      padding: 14px;
+      line-height: 1.45;
+      font-size: 13px;
+      overflow: auto;
+      max-height: 520px;
+      tab-size: 2;
+    }
+
+    .kw { color: #569cd6; }
+    .fn { color: #dcdcaa; }
+    .st { color: #ce9178; }
+    .cm { color: #6a9955; }
+
+    .pad { padding: 14px; }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #454545;
+      background: #313131;
+      color: var(--text);
+      border-radius: 4px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 12px;
+      transition: border-color .14s ease, background .14s ease;
+    }
+
+    .btn:hover { border-color: #6a6a6a; background: #3a3a3a; }
+    .btn.active { background: #094771; border-color: var(--blue); color: #ffffff; }
+
+    .preview {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--editor);
+      overflow: hidden;
+    }
+
+    .editor-title {
+      height: 30px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      background: #2d2d2d;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      color: #c8c8c8;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6f6f6f;
+    }
+
+    .breadcrumb-shell {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      background: #252526;
+    }
+
+    .crumbs {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-wrap: wrap;
+      font-size: 12px;
+    }
+
+    .crumb {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 3px;
+      padding: 2px 4px;
+      color: #c5c5c5;
+    }
+
+    .crumb.link {
+      text-decoration: none;
+      transition: color .15s ease, background .15s ease;
+      cursor: pointer;
+    }
+
+    .crumb.link:hover {
+      color: #ffffff;
+      background: #313131;
+    }
+
+    .crumb.page {
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .sep {
+      color: #8c8c8c;
+      margin: 0 1px;
+      font-size: 11px;
+    }
+
+    .icon {
+      width: 13px;
+      height: 13px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, #89d185 0%, #4e9a5a 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.15);
+    }
+
+    .editor-mock {
+      padding: 12px 14px;
+      color: #bcbcbc;
+      font-size: 13px;
+      min-height: 130px;
+      background: #1e1e1e;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #252526;
+      font-size: 13px;
+      color: #b5b5b5;
+      line-height: 1.45;
+    }
+
+    .step b { color: var(--text); }
+    .badge {
+      display: inline-block;
+      margin-right: 6px;
+      font-size: 11px;
+      border: 1px solid #6b5229;
+      color: var(--warn);
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: rgba(215, 186, 125, 0.1);
+      vertical-align: middle;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      body { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>FileBreadcrumbs VS Code Render Guide</h1>
+      <p>
+        This page explains what each part of your component does and shows live rendering behavior.
+        Use the state buttons to switch between empty and populated breadcrumb output.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-head">
+          <span>Code View (pretty snippet)</span>
+          <span style="color: var(--muted); font-size: 12px;">component snippet</span>
+        </div>
+        <pre class="code"><code>
+<span class="kw">import</span> React <span class="kw">from</span> <span class="st">"react"</span>;
+<span class="kw">import</span> { FileIcon } <span class="kw">from</span> <span class="st">"@react-symbols/icons/utils"</span>;
+<span class="kw">import</span> { useFilePath } <span class="kw">from</span> <span class="st">"@/features/projects/hooks/use-files"</span>;
+<span class="kw">import</span> { useEditor } <span class="kw">from</span> <span class="st">"@/features/editor/hooks/use-editor"</span>;
+<span class="kw">import</span> { Breadcrumb, BreadcrumbItem, BreadcrumbPage, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } <span class="kw">from</span> <span class="st">"@/components/ui/breadcrumb"</span>;
+
+<span class="kw">export const</span> <span class="fn">FileBreadcrumbs</span> = ({ projectId }) =&gt; {
+  <span class="kw">const</span> { activeTabId } = <span class="fn">useEditor</span>(projectId);
+  <span class="kw">const</span> filePath = <span class="fn">useFilePath</span>(activeTabId);
+
+  <span class="cm">// Guard state: show placeholder when no active file/path</span>
+  <span class="kw">if</span> (!filePath || !activeTabId) {
+    <span class="kw">return</span> (
+      &lt;div className=<span class="st">"p-2 bg-background pl-4 border-b"</span>&gt;
+        &lt;Breadcrumb&gt;
+          &lt;BreadcrumbList className=<span class="st">"sm:gap-0.5 gap-0.5"</span>&gt;
+            &lt;BreadcrumbItem className=<span class="st">"text-sm"</span>&gt;
+              &lt;BreadcrumbPage&gt;&amp;nbsp;&lt;/BreadcrumbPage&gt;
+            &lt;/BreadcrumbItem&gt;
+          &lt;/BreadcrumbList&gt;
+        &lt;/Breadcrumb&gt;
+      &lt;/div&gt;
+    );
+  }
+
+  <span class="cm">// Main state: render path segments</span>
+  <span class="kw">return</span> (
+    &lt;div className=<span class="st">"p-2 bg-background pl-4 border-b"</span>&gt;
+      &lt;Breadcrumb&gt;
+        &lt;BreadcrumbList className=<span class="st">"sm:gap-0.5 gap-0.5"</span>&gt;
+          {filePath.map((file, index) =&gt; {
+            <span class="kw">const</span> isLast = index === filePath.length - 1;
+            <span class="kw">return</span> (
+              &lt;React.Fragment key={file._id}&gt;
+                &lt;BreadcrumbItem className=<span class="st">"text-sm"</span>&gt;
+                  {isLast ? (
+                    &lt;BreadcrumbPage className=<span class="st">"flex items-center gap-1"</span>&gt;
+                      &lt;FileIcon fileName={file.name} autoAssign className=<span class="st">"size-4"</span> /&gt;
+                      {file.name}
+                    &lt;/BreadcrumbPage&gt;
+                  ) : (
+                    &lt;BreadcrumbLink href=<span class="st">"#"</span>&gt;{file.name}&lt;/BreadcrumbLink&gt;
+                  )}
+                &lt;/BreadcrumbItem&gt;
+                {!isLast &amp;&amp; &lt;BreadcrumbSeparator /&gt;}
+              &lt;/React.Fragment&gt;
+            );
+          })}
+        &lt;/BreadcrumbList&gt;
+      &lt;/Breadcrumb&gt;
+    &lt;/div&gt;
+  );
+};
+        </code></pre>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <span>Live Visual Render</span>
+          <span style="color: var(--muted); font-size: 12px;">vscode-like preview</span>
+        </div>
+        <div class="pad">
+          <div class="row">
+            <button class="btn active" data-state="empty">No Active Tab</button>
+            <button class="btn" data-state="full">Active Tab Path</button>
+          </div>
+
+          <div class="preview" id="preview"></div>
+
+          <div class="steps" id="steps"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const preview = document.getElementById('preview');
+    const steps = document.getElementById('steps');
+    const buttons = [...document.querySelectorAll('.btn')];
+
+    const states = {
+      empty: {
+        render: `
+          <div class="editor-title">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span>Editor</span>
+          </div>
+          <div class="breadcrumb-shell">
+            <div class="crumbs">
+              <span class="crumb">&nbsp;</span>
+            </div>
+          </div>
+          <div class="editor-mock">
+            Empty placeholder rendered because file path is missing or no active tab exists.
+          </div>
+        `,
+        notes: [
+          'useEditor(projectId) returns activeTabId. When it is missing, the guard executes.',
+          'useFilePath(activeTabId) can return undefined while loading or when unresolved.',
+          'Component returns a minimal breadcrumb wrapper to preserve layout height and border.'
+        ]
+      },
+      full: {
+        render: `
+          <div class="editor-title">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span>Editor</span>
+          </div>
+          <div class="breadcrumb-shell">
+            <div class="crumbs">
+              <span class="crumb link">workspace</span><span class="sep">></span>
+              <span class="crumb link">src</span><span class="sep">></span>
+              <span class="crumb link">features</span><span class="sep">></span>
+              <span class="crumb link">editor</span><span class="sep">></span>
+              <span class="crumb link">components</span><span class="sep">></span>
+              <span class="crumb page"><span class="icon"></span>file-breadcrumbs.tsx</span>
+            </div>
+          </div>
+          <div class="editor-mock">
+            Last item uses BreadcrumbPage + FileIcon (current file). Previous segments are BreadcrumbLink.
+          </div>
+        `,
+        notes: [
+          'filePath.map iterates each segment from root to current file.',
+          'isLast decides behavior: links for earlier segments, page style for current segment.',
+          'BreadcrumbSeparator appears only between items, not after the final segment.'
+        ]
+      }
+    };
+
+    function setState(name) {
+      buttons.forEach((b) => b.classList.toggle('active', b.dataset.state === name));
+      preview.innerHTML = states[name].render;
+      steps.innerHTML = states[name].notes
+        .map((n, i) => `<div class="step"><span class="badge">Step ${i + 1}</span><b>${n}</b></div>`)
+        .join('');
+    }
+
+    buttons.forEach((b) => b.addEventListener('click', () => setState(b.dataset.state)));
+    setState('empty');
+  </script>
+</body>
+</html>

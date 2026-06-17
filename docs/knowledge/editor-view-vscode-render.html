@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EditorView VS Code Learning Render</title>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --panel: #252526;
+      --panel-2: #2d2d30;
+      --line: #3c3c3c;
+      --text: #cccccc;
+      --muted: #9f9f9f;
+      --active: #ffffff;
+      --blue: #3794ff;
+      --green: #89d185;
+      --orange: #d7ba7d;
+      --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+      --sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      padding: 16px;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .header {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 12px 14px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: var(--active);
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .workbench {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .titlebar {
+      height: 34px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-2);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 12px;
+      color: #b7b7b7;
+    }
+
+    .dots { display: flex; gap: 6px; margin-right: 10px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      min-height: 520px;
+    }
+
+    .left, .right { min-width: 0; }
+    .left { border-right: 1px solid var(--line); background: #1e1e1e; }
+    .right { background: #222326; }
+
+    .tabs {
+      height: 34px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      background: #2d2d2d;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 12px;
+      border-right: 1px solid var(--line);
+      color: #bdbdbd;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      background: #1e1e1e;
+      color: #fff;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    .crumb-bar {
+      height: 28px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 2px;
+      font-size: 12px;
+      color: #c3c3c3;
+      background: #252526;
+    }
+
+    .crumb { padding: 2px 4px; border-radius: 3px; }
+    .crumb:hover { background: #313131; }
+    .sep { color: #8b8b8b; }
+
+    .editor-surface {
+      padding: 12px;
+      min-height: 430px;
+      color: #d4d4d4;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+      background: #1e1e1e;
+    }
+
+    .block {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      background: #252526;
+    }
+
+    .block-head {
+      padding: 8px 10px;
+      font-size: 12px;
+      border-bottom: 1px solid var(--line);
+      color: #e2e2e2;
+      background: #2d2d30;
+    }
+
+    .code {
+      margin: 0;
+      padding: 10px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.45;
+      color: #d4d4d4;
+      background: #1e1e1e;
+    }
+
+    .exp {
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      color: #b8b8b8;
+      font-size: 12px;
+      line-height: 1.45;
+      background: #222326;
+    }
+
+    .kw { color: #569cd6; }
+    .fn { color: #dcdcaa; }
+    .st { color: #ce9178; }
+    .cm { color: #6a9955; }
+
+    .state-panel {
+      padding: 10px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      border: 1px solid #555;
+      background: #313131;
+      color: #ddd;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn.active {
+      background: #094771;
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .explain-card {
+      border: 1px solid var(--line);
+      background: #252526;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #c2c2c2;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-right: 6px;
+      border: 1px solid #5f5031;
+      background: rgba(215, 186, 125, 0.12);
+      color: var(--orange);
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 11px;
+    }
+
+    .timeline {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #1e1e1e;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .tick {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #252526;
+      font-size: 12px;
+      color: #c7c7c7;
+    }
+
+    .t { color: var(--green); font-family: var(--mono); }
+
+    @media (max-width: 980px) {
+      .editor-layout { grid-template-columns: 1fr; }
+      .left { border-right: 0; border-bottom: 1px solid var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="header">
+      <h1>EditorView Component, Rendered Like VS Code</h1>
+      <p>This page maps each important block of your editor-view component to what appears on screen. Use the state buttons to simulate runtime behavior.</p>
+    </section>
+
+    <section class="workbench">
+      <div class="titlebar"><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>cursor-clone - editor-view.tsx</div>
+      <div class="editor-layout">
+        <div class="left">
+          <div class="tabs">
+            <div class="tab active">editor-view.tsx</div>
+            <div class="tab">top-navigation.tsx</div>
+            <div class="tab">file-breadcrumbs.tsx</div>
+          </div>
+          <div class="crumb-bar" id="crumbBar">
+            <span class="crumb">workspace</span><span class="sep">&gt;</span>
+            <span class="crumb">src</span><span class="sep">&gt;</span>
+            <span class="crumb">features</span><span class="sep">&gt;</span>
+            <span class="crumb">editor</span><span class="sep">&gt;</span>
+            <span class="crumb">components</span><span class="sep">&gt;</span>
+            <span class="crumb">editor-view.tsx</span>
+          </div>
+          <div class="editor-surface" id="editorSurface">Rendering state: text file open. CodeEditor mounts here.</div>
+        </div>
+
+        <div class="right state-panel">
+          <div class="controls">
+            <button class="btn active" data-state="none">No Active File</button>
+            <button class="btn" data-state="text">Text File</button>
+            <button class="btn" data-state="binary">Binary File</button>
+          </div>
+
+          <div class="explain-card" id="stateExplain"></div>
+
+          <div class="block">
+            <div class="block-head">Block 1: State + Dependencies</div>
+            <pre class="code"><code><span class="kw">const</span> { activeTabId } = <span class="fn">useEditor</span>(projectId);
+<span class="kw">const</span> activeFile = <span class="fn">useFile</span>(activeTabId);
+<span class="kw">const</span> updateFile = <span class="fn">useUpdateFile</span>();
+<span class="kw">const</span> debounceTimer = <span class="fn">useRef</span>(<span class="kw">null</span>);
+<span class="kw">const</span> isActiveFileBinary = activeFile && activeFile.storageId;
+<span class="kw">const</span> isActiveFileText = activeFile && !activeFile.storageId;</code></pre>
+            <div class="exp">
+              Gets current tab id from editor store, loads that file, prepares mutation for saving, and computes file type branch.
+              The ref stores timer id across renders without re-rendering.
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">Block 2: Top UI Shell</div>
+            <pre class="code"><code>&lt;div className=<span class="st">"h-full flex flex-col"</span>&gt;
+  &lt;TopNavigation projectId={projectId} /&gt;
+  {activeTabId &amp;&amp; &lt;FileBreadcrumbs projectId={projectId} /&gt;}
+  ...
+&lt;/div&gt;</code></pre>
+            <div class="exp">
+              Vertical layout: top tabs first, then breadcrumbs only when a tab exists, then main editor area below.
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">Block 3: Conditional Main Content</div>
+            <pre class="code"><code>{!activeFile &amp;&amp; <span class="cm">/* centered logo */</span>}
+{isActiveFileText &amp;&amp; &lt;CodeEditor ... /&gt;}
+{isActiveFileBinary &amp;&amp; &lt;p&gt;TODO: Implement binary preview&lt;/p&gt;}</code></pre>
+            <div class="exp">
+              Exactly one branch should show: empty state, text editor, or binary placeholder.
+            </div>
+          </div>
+
+          <div class="block">
+            <div class="block-head">Block 4: Debounced Save on Typing</div>
+            <pre class="code"><code>onChange={(content) =&gt; {
+  <span class="kw">if</span> (debounceTimer.current) <span class="fn">clearTimeout</span>(debounceTimer.current);
+  debounceTimer.current = <span class="fn">setTimeout</span>(() =&gt; {
+    <span class="fn">updateFile</span>({ id: activeFile._id, content });
+  }, 1500);
+}}</code></pre>
+            <div class="exp">
+              Every keystroke resets the timer. Save happens only after user pauses typing for 1500ms.
+              This reduces server writes and improves performance.
+            </div>
+          </div>
+
+          <div class="explain-card">
+            <span class="tag">Debounce Concept</span>
+            Debounce means: delay execution until events stop happening for a fixed window.
+            Typing generates many events; debounce collapses them into one save call after the pause.
+          </div>
+
+          <div class="timeline">
+            <div class="tick"><span class="t">t=0ms</span> User types "a". Timer starts for 1500ms.</div>
+            <div class="tick"><span class="t">t=400ms</span> User types again. Previous timer cancelled. New 1500ms timer starts.</div>
+            <div class="tick"><span class="t">t=900ms</span> User types again. Timer cancelled again and restarted.</div>
+            <div class="tick"><span class="t">t=2400ms</span> No typing for 1500ms. updateFile fires once with latest content.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const buttons = Array.from(document.querySelectorAll('.btn'));
+    const surface = document.getElementById('editorSurface');
+    const explain = document.getElementById('stateExplain');
+    const crumbBar = document.getElementById('crumbBar');
+
+    const view = {
+      none: {
+        text: 'Rendering state: no active file. Empty logo placeholder would be centered in editor area.',
+        explain: '<span class="tag">Branch: !activeFile</span>useFile(activeTabId) returned nothing. So the centered logo block is rendered.'
+      },
+      text: {
+        text: 'Rendering state: text file open. CodeEditor receives fileName, initialValue, and debounced onChange save.',
+        explain: '<span class="tag">Branch: isActiveFileText</span>File has no storageId, so CodeEditor mounts and onChange debounces updateFile calls.'
+      },
+      binary: {
+        text: 'Rendering state: binary file open. Placeholder shown: TODO: Implement binary preview.',
+        explain: '<span class="tag">Branch: isActiveFileBinary</span>File has storageId. Current implementation intentionally shows a placeholder.'
+      }
+    };
+
+    function setState(name) {
+      buttons.forEach((b) => b.classList.toggle('active', b.dataset.state === name));
+      surface.textContent = view[name].text;
+      explain.innerHTML = view[name].explain;
+
+      if (name === 'none') {
+        crumbBar.style.opacity = '0.45';
+      } else {
+        crumbBar.style.opacity = '1';
+      }
+    }
+
+    buttons.forEach((b) => b.addEventListener('click', () => setState(b.dataset.state)));
+    setState('text');
+  </script>
+</body>
+</html>
