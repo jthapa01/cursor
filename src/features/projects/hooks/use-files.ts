@@ -2,6 +2,18 @@ import { useMutation, useQuery } from "convex/react";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 
+export const useFile = (fileId: Id<"files"> | null) => {
+  return useQuery(api.files.getFile, fileId ? { id: fileId } : "skip");
+};
+
+export const useUpdateFile = () => {
+  return useMutation(api.files.updateFile);
+};
+
+export const useFilePath = (fileId: Id<"files"> | null) => {
+  return useQuery(api.files.getFilePath, fileId ? { fileId } : "skip");
+};
+
 export const useCreateFile = () => {
   return useMutation(api.files.createFile);
 };
@@ -21,11 +33,14 @@ export const useDeleteFile = () => {
 export const useFolderContents = ({
   projectId,
   parentId,
-  enabled = true
+  enabled = true,
 }: {
   projectId: Id<"projects">;
   parentId?: Id<"files">;
   enabled?: boolean;
 }) => {
-  return useQuery(api.files.getFolderContents, enabled ? { projectId, parentId } : "skip");
+  return useQuery(
+    api.files.getFolderContents,
+    enabled ? { projectId, parentId } : "skip",
+  );
 };
