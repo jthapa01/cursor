@@ -3,12 +3,13 @@ import { EditorView, keymap } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { indentWithTab } from "@codemirror/commands";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
-
 import { minimap } from "../extensions/minimap";
 import { customTheme } from "../extensions/theme";
 import { getLanguageExtension } from "../extensions/language-extension";
 import { customSetup } from "../extensions/custom-setup";
-
+import { suggestion } from "../extensions/suggestion";
+import { quickEdit } from "../extensions/quick-edit";
+import { selectionTooltip } from "../extensions/selection-tooltip";
 interface CodeEditorProps {
   fileName: string;
   initialValue?: string;
@@ -38,6 +39,9 @@ export const CodeEditor = ({ fileName, initialValue = "", onChange }: CodeEditor
           indentationMarkers(),
           minimap(),
           languageExtension,
+          suggestion(fileName),
+          selectionTooltip(),
+          quickEdit(fileName),
           customSetup,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
