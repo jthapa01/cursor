@@ -9,18 +9,20 @@ export const demoGenerate = inngest.createFunction(
   { id: "demo-generate" },
   { event: "demo/generate" },
   async ({ event, step }) => {
-    const { prompt } = event.data as { prompt: string; };
+    const { prompt } = event.data as { prompt: string };
 
-    const urls = await step.run("extract-urls", async () => {
+    const urls = (await step.run("extract-urls", async () => {
       const matches = prompt.match(URL_REGEX);
       return matches || [];
-    }) as string[];
+    })) as string[];
 
     const scrapedContent = await step.run("scrape-urls", async () => {
-      const results = await Promise.all(urls.map(async (url) => {
-        const result = await firecrawl.scrape(url, { formats: ["markdown"]});
-        return result.markdown ?? null;
-      }));
+      const results = await Promise.all(
+        urls.map(async (url) => {
+          const result = await firecrawl.scrape(url, { formats: ["markdown"] });
+          return result.markdown ?? null;
+        }),
+      );
       return results.filter(Boolean).join("\n\n");
     });
 
@@ -30,7 +32,7 @@ export const demoGenerate = inngest.createFunction(
 
     await step.run("generate-text", async () => {
       return await generateText({
-        model: anthropic("claude-3-haiku-20240307"),
+        model: anthropic("claude-sonnet-5"),
         prompt: finalPrompt,
         experimental_telemetry: {
           isEnabled: true,

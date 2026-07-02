@@ -1,8 +1,6 @@
 import Image from "next/image";
-import { useRef } from "react";
-
+import { useRef, useEffect } from "react";
 import { useFile, useUpdateFile } from "@/features/projects/hooks/use-files";
-
 import { CodeEditor } from "./code-editor";
 import { useEditor } from "../hooks/use-editor";
 import { TopNavigation } from "./top-navigation";
@@ -18,6 +16,15 @@ export const EditorView = ({ projectId }: { projectId: Id<"projects"> }) => {
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const isActiveFileBinary = activeFile && activeFile.storageId;
   const isActiveFileText = activeFile && !activeFile.storageId;
+
+  // Cleanup pending debounce timer on unmount or file change
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, [activeFile]);
 
   return (
     <div className="h-full flex flex-col">
