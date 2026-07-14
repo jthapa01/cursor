@@ -41,7 +41,7 @@ export const CodeEditor = ({ fileName, initialValue = "", onChange }: CodeEditor
           languageExtension,
           suggestion(fileName),
           selectionTooltip(),
-          quickEdit(fileName),
+          quickEdit(),
           customSetup,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
