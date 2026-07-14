@@ -1,0 +1,348 @@
+PS C:\Playground\cursor-clone\cursor> $script = @'
+>> Write-Output "================ WINDOWS DIAGNOSTIC SNAPSHOT ================"
+>> 
+>> # F) System uptime
+>> Write-Output "`n--- F) System Uptime ---"
+>> try {
+>>     $os = Get-CimInstance Win32_OperatingSystem
+>>     $uptime = (Get-Date) - $os.LastBootUpTime
+>>     Write-Output "Last Boot Up Time: $($os.LastBootUpTime)"
+>>     Write-Output "Uptime           : $($uptime.Days) days, $($uptime.Hours) h
+ours, $($uptime.Minutes) minutes"
+>> } catch {
+>>     Write-Output "Exception: $($_.Exception.Message)"
+>> }
+>> 
+>> # A) Sample per-process CPU usage over a 5-second interval
+>> Write-Output "`n--- A) Per-Process CPU Usage (5-second sample) ---"
+>> $processes = Get-Process | Where-Object { $_.Id -ne 0 -and $_.Id -ne 4 }
+>> $start = [DateTime]::UtcNow
+>> $stats1 = @{}
+>> foreach ($p in $processes) {
+>>     try {
+>>         $stats1[$p.Id] = @{
+>>             Name = $p.ProcessName
+>>             CpuTime = $p.TotalProcessorTime.TotalSeconds
+>>             WorkingSet = $p.WorkingSet64
+>>             PrivateMemory = $p.PrivateMemorySize64
+>>         }
+>>     } catch {}
+>> }
+>> 
+>> Start-Sleep -Seconds 5
+>> 
+>> $end = [DateTime]::UtcNow
+>> $duration = ($end - $start).TotalSeconds
+>> $processes2 = Get-Process
+>> $cpuUsage = @()
+>> foreach ($p in $processes2) {
+>>     try {
+>>         if ($stats1.ContainsKey($p.Id)) {
+>>             $prev = $stats1[$p.Id]
+>>             $currCpu = $p.TotalProcessorTime.TotalSeconds
+>>             $diff = $currCpu - $prev.CpuTime
+>>             $pct = ($diff / $duration) * 100
+>>             $cpuUsage += [PSCustomObject]@{
+>>                 Pid = $p.Id
+>>                 Name = $p.ProcessName
+>>                 CpuPct = [Math]::Round($pct, 2)
+>>                 WorkingSetMB = [Math]::Round($p.WorkingSet64 / 1MB, 2)
+>>                 PrivateMemoryMB = [Math]::Round($p.PrivateMemorySize64 / 1MB,
+ 2)
+>>             }
+>>         }
+>>     } catch {}
+>> }
+>> 
+>> $top15 = $cpuUsage | Sort-Object CpuPct -Descending | Select-Object -First 15
+>> $top15 | Format-Table -AutoSize
+>> 
+>> # B) Mapping PIDs to executable path and command line
+>> Write-Output "`n--- B) Executable Paths and Command Lines for Top 15 PIDs ---
+"
+>> foreach ($proc in $top15) {
+>>     $pid = $proc.Pid
+>>     $win32 = Get-CimInstance Win32_Process -Filter "ProcessId = $pid" -ErrorA
+ction SilentlyContinue
+>>     if ($win32) {
+>>         [PSCustomObject]@{
+>>             Pid = $pid
+>>             Name = $proc.Name
+>>             CpuPct = $proc.CpuPct
+>>             Path = $win32.ExecutablePath
+>>             CommandLine = $win32.CommandLine
+>>         } | Format-List
+>>     } else {
+>>         [PSCustomObject]@{
+>>             Pid = $pid
+>>             Name = $proc.Name
+>>             CpuPct = $proc.CpuPct
+>>             Path = "N/A (Access Denied or Exited)"
+>>             CommandLine = "N/A"
+>>         } | Format-List
+>>     }
+>> }
+>> 
+>> # C) Code.exe and msedgewebview2.exe list
+>> Write-Output "`n--- C) Code.exe and msedgewebview2.exe Details ---"
+>> $electronProcs = Get-Process -Name Code, msedgewebview2 -ErrorAction Silently
+Continue
+>> $electronList = @()
+>> foreach ($p in $electronProcs) {
+>>     try {
+>>         $win32 = Get-CimInstance Win32_Process -Filter "ProcessId = $($p.Id)"
+ -ErrorAction SilentlyContinue
+>>         $parentPid = if ($win32) { $win32.ParentProcessId } else { "N/A" }
+>>         $cmdLine = if ($win32) { $win32.CommandLine } else { $null }
+>>         $startTime = $p.StartTime
+>>         $lifetimeCpu = $p.TotalProcessorTime.TotalSeconds
+>>         
+>>         $role = "Main/Unknown"
+>>         if ($cmdLine) {
+>>             if ($cmdLine -match "--type=extensionHost") { $role = "Extension 
+Host" }
+>>             elseif ($cmdLine -match "--type=renderer") { $role = "Renderer" }
+>>             elseif ($cmdLine -match "--type=gpu-process") { $role = "GPU Proc
+ess" }
+>>             elseif ($cmdLine -match "--type=utility") { $role = "Utility Proc
+ess" }
+>>             elseif ($cmdLine -match "--type=zygote") { $role = "Zygote" }
+>>             elseif ($cmdLine -match "copilot-chat" -or $cmdLine -match "githu
+b.copilot-chat") { $role = "Copilot/Chat" }
+>>             elseif ($cmdLine -match "--type=crashpad-handler") { $role = "Cra
+shpad" }
+>>         }
+>>         
+>>         $electronList += [PSCustomObject]@{
+>>             Pid = $p.Id
+>>             ParentPid = $parentPid
+>>             Name = $p.ProcessName
+>>             Role = $role
+>>             WorkingSetMB = [Math]::Round($p.WorkingSet64 / 1MB, 2)
+>>             PrivateMemoryMB = [Math]::Round($p.PrivateMemorySize64 / 1MB, 2)
+>>             LifetimeCpuSec = [Math]::Round($lifetimeCpu, 2)
+>>             StartTime = $startTime
+>>             CommandLine = $cmdLine
+>>         }
+>>     } catch {}
+>> }
+>> $electronList | Format-Table Pid, ParentPid, Name, Role, WorkingSetMB, Privat
+eMemoryMB, LifetimeCpuSec, StartTime -AutoSize
+>> Write-Output "`n--- Command Lines for Code/msedgewebview2 ---"
+>> foreach ($el in $electronList) {
+>>     Write-Output "PID $($el.Pid) [$($el.Name) - $($el.Role)]:"
+>>     Write-Output "  CommandLine: $($el.CommandLine)"
+>>     Write-Output ""
+>> }
+>> 
+>> # D) Defender status
+>> Write-Output "`n--- D) Defender (MsMpEng.exe) Status ---"
+>> $msmp = Get-Process -Name MsMpEng -ErrorAction SilentlyContinue
+>> if ($msmp) {
+>>     $t1 = $msmp.TotalProcessorTime.TotalSeconds
+>>     $s1 = [DateTime]::UtcNow
+>>     Start-Sleep -Seconds 2
+>>     $t2 = $msmp.TotalProcessorTime.TotalSeconds
+>>     $s2 = [DateTime]::UtcNow
+>>     $pct = (($t2 - $t1) / ($s2 - $s1).TotalSeconds) * 100
+>>     [PSCustomObject]@{
+>>         Pid = $msmp.Id
+>>         CpuPct_2s = [Math]::Round($pct, 2)
+>>         WorkingSetMB = [Math]::Round($msmp.WorkingSet64 / 1MB, 2)
+>>         PrivateMemoryMB = [Math]::Round($msmp.PrivateMemorySize64 / 1MB, 2)
+>>     } | Format-Table -AutoSize
+>> } else {
+>>     Write-Output "MsMpEng.exe is not running or not accessible."
+>> }
+>> try {
+>>     $pref = Get-MpPreference -ErrorAction SilentlyContinue
+>>     if ($pref) {
+>>         Write-Output "DisableRealtimeMonitoring: $($pref.DisableRealtimeMonit
+oring)"
+>>         Write-Output "DisableIOAVProtection: $($pref.DisableIOAVProtection)"
+>>         $exclPath = $pref.ExclusionPath
+>>         if ($exclPath) {
+>>             $nodeModulesExcl = $exclPath | Where-Object { $_ -match "node_mod
+ules" -or $_ -match "Playground" }
+>>             if ($nodeModulesExcl) {
+>>                 Write-Output "Exclusions related to node_modules or Playgroun
+d: $($nodeModulesExcl -join ', ')"
+>>             } else {
+>>                 Write-Output "No exclusions active for node_modules or Playgr
+ound."
+>>             }
+>>         } else {
+>>             Write-Output "No path exclusions configured."
+>>         }
+>>     } else {
+>>         Write-Output "Could not access Defender settings (requires administra
+tor)."
+>>     }
+>> } catch {
+>>     Write-Output "Defender settings query exception: $($_.Exception.Message)"
+>> }
+>> 
+>> # E) Pagefile usage
+>> Write-Output "`n--- E) Pagefile Usage ---"
+>> try {
+>>     $pf = Get-CimInstance Win32_PageFileUsage -ErrorAction SilentlyContinue
+>>     if ($pf) {
+>>         foreach ($p in $pf) {
+>>             [PSCustomObject]@{
+>>                 Name = $p.Name
+>>                 CurrentUsageMB = $p.CurrentUsage
+>>                 PeakUsageMB = $p.PeakUsage
+>>                 AllocatedSizeMB = $p.AllocatedBaseSize
+>>             } | Format-Table -AutoSize
+>>         }
+>>     } else {
+>>         Write-Output "Win32_PageFileUsage returned nothing. Trying Performanc
+e counters..."
+>>         $pfPerf = Get-CimInstance Win32_PerformanceFormattedData_PerfOS_Pagin
+gFile -ErrorAction SilentlyContinue
+>>         if ($pfPerf) {
+>>             $pfPerf | Format-Table Name, PercentUsage, PercentUsagePeak -Auto
+Size
+>>         } else {
+>>             Write-Output "Could not retrieve pagefile usage info."
+>>         }
+>>     }
+>> } catch {
+>>     Write-Output "Pagefile query exception: $($_.Exception.Message)"
+>> }
+>> 
+>> # G) Fixed-Disk Free Space
+>> Write-Output "`n--- G) Fixed-Disk Free Space ---"
+>> try {
+>>     Get-CimInstance Win32_LogicalDisk -Filter "DriveType = 3" | ForEach-Objec
+t {
+>>         [PSCustomObject]@{
+>>             DeviceID = $_.DeviceID
+>>             VolumeName = $_.VolumeName
+>>             SizeGB = [Math]::Round($_.Size / 1GB, 2)
+>>             FreeSpaceGB = [Math]::Round($_.FreeSpace / 1GB, 2)
+>>             PercentFree = [Math]::Round(($_.FreeSpace / $_.Size) * 100, 2)
+>>         }
+>>     } | Format-Table -AutoSize
+>> } catch {
+>>     Write-Output "Fixed-disk query exception: $($_.Exception.Message)"
+>> }
+>> 
+>> # H) Current Power Plan
+>> Write-Output "`n--- H) Current Power Plan ---"
+>> try {
+>>     $plan = powercfg /getactivescheme
+>>     Write-Output $plan
+>> } catch {
+>>     Write-Output "Power plan query exception: $($_.Exception.Message)"
+>> }
+>> 
+>> # I) Project node_modules and NPM cache sizes (bounded to 30s each)
+>> Write-Output "`n--- I) Project node_modules and NPM Cache Sizes (30s limits) 
+---"
+>> $nodeModulesPath = Join-Path (Get-Location) "node_modules"
+>> if (Test-Path $nodeModulesPath) {
+>>     Write-Output "Calculating size of $nodeModulesPath (bounded to 30s)..."
+>>     $size = 0
+>>     $count = 0
+>>     $sw = [System.Diagnostics.Stopwatch]::StartNew()
+>>     $aborted = $false
+>>     try {
+>>         $enum = [System.IO.Directory]::EnumerateFiles($nodeModulesPath, "*", 
+[System.IO.SearchOption]::AllDirectories).GetEnumerator()
+>>         while ($enum.MoveNext()) {
+>>             if ($sw.ElapsedMilliseconds -gt 30000) {
+>>                 $aborted = $true
+>>                 break
+>>             }
+>>             try {
+>>                 $file = [System.IO.FileInfo]::new($enum.Current)
+>>                 $size += $file.Length
+>>                 $count++
+>>             } catch {}
+>>         }
+>>     } catch {
+>>         Write-Output "Error accessing files: $($_.Exception.Message)"
+>>     }
+>>     $sw.Stop()
+>>     $sizeMB = [Math]::Round($size / 1MB, 2)
+>>     Write-Output "node_modules size: $sizeMB MB ($count files) [Time: $($sw.E
+lapsed.TotalSeconds)s, Aborted: $aborted]"
+>> } else {
+>>     Write-Output "No node_modules directory found at $nodeModulesPath"
+>> }
+>> 
+>> $npmCachePath = $null
+>> try { $npmCachePath = (npm config get cache) } catch {}
+>> if (-not $npmCachePath) {
+>>     $npmCachePath = Join-Path $env:LocalAppData "npm-cache"
+>> }
+>> $npmCachePath = $npmCachePath.Trim()
+>> if (Test-Path $npmCachePath) {
+>>     Write-Output "Calculating size of NPM Cache ($npmCachePath) (bounded to 3
+0s)..."
+>>     $size = 0
+>>     $count = 0
+>>     $sw = [System.Diagnostics.Stopwatch]::StartNew()
+>>     $aborted = $false
+>>     try {
+>>         $enum = [System.IO.Directory]::EnumerateFiles($npmCachePath, "*", [Sy
+stem.IO.SearchOption]::AllDirectories).GetEnumerator()
+>>         while ($enum.MoveNext()) {
+>>             if ($sw.ElapsedMilliseconds -gt 30000) {
+>>                 $aborted = $true
+>>                 break
+>>             }
+>>             try {
+>>                 $file = [System.IO.FileInfo]::new($enum.Current)
+>>                 $size += $file.Length
+>>                 $count++
+>>             } catch {}
+>>         }
+>>     } catch {
+>>         Write-Output "Error accessing files: $($_.Exception.Message)"
+>>     }
+>>     $sw.Stop()
+>>     $sizeMB = [Math]::Round($size / 1MB, 2)
+>>     Write-Output "NPM Cache size: $sizeMB MB ($count files) [Time: $($sw.Elap
+sed.TotalSeconds)s, Aborted: $aborted]"
+>> } else {
+>>     Write-Output "NPM Cache directory not found at $npmCachePath"
+>> }
+>> 
+>> # J) Disk Performance Snapshot (5s)
+>> Write-Output "`n--- J) Disk Performance Snapshot (5-second sample) ---"
+>> try {
+>>     $counters = @(
+>>         "\PhysicalDisk(_Total)\% Disk Time",
+>>         "\PhysicalDisk(_Total)\Current Disk Queue Length",
+>>         "\PhysicalDisk(_Total)\Disk Read Bytes/sec",
+>>         "\PhysicalDisk(_Total)\Disk Write Bytes/sec"
+>>     )
+>>     $samples = Get-Counter -Counter $counters -SampleInterval 5 -MaxSamples 1
+ -ErrorAction SilentlyContinue
+>>     if ($samples) {
+>>         foreach ($s in $samples.CounterSamples) {
+>>             $value = $s.CookedValue
+>>             if ($s.Path -match "read bytes") {
+>>                 $readMB = [Math]::Round($value / 1MB, 2)
+>>                 Write-Output "Disk Read Speed  : $readMB MB/s"
+>>             } elseif ($s.Path -match "write bytes") {
+>>                 $writeMB = [Math]::Round($value / 1MB, 2)
+>>                 Write-Output "Disk Write Speed : $writeMB MB/s"
+>>             } elseif ($s.Path -match "disk time") {
+>>                 $activePct = [Math]::Round($value, 2)
+>>                 Write-Output "Disk Active Time : $activePct %"
+>>             } elseif ($s.Path -match "queue length") {
+>>                 $queueLen = [Math]::Round($value, 2)
+>>                 Write-Output "Disk Queue Length: $queueLen"
+>>             }
+>>         }
+>>     } else {
+>>         Write-Output "Disk performance counters are unavailable or returned n
+o data."
+>>     }
+>> } catch {
+>>     Write-Output "Disk performance sample exception: $($_.Exception.Message)"
+>> }
+>> '@

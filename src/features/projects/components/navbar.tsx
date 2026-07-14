@@ -18,7 +18,7 @@ const font = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] 
 
 export const Navbar = ({ projectId }: { projectId: Id<"projects">; }) => {
   const project = useProject(projectId);
-  const renameProject = useRenameProject(projectId);
+  const renameProject = useRenameProject();
 
   const [isRenaming, setIsRenaming] = useState(false);
   const [name, setName] = useState("");
