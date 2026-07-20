@@ -10,12 +10,20 @@ import { Id } from "../../../../convex/_generated/dataModel";
 const DEBOUNCE_MS = 1500;
 
 export const EditorView = ({ projectId }: { projectId: Id<"projects"> }) => {
-  const { activeTabId } = useEditor(projectId);
+  const { activeTabId, closeTab } = useEditor(projectId);
   const activeFile = useFile(activeTabId);
   const updateFile = useUpdateFile();
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const isActiveFileBinary = activeFile && activeFile.storageId;
   const isActiveFileText = activeFile && !activeFile.storageId;
+
+  // Close a tab whose file has been deleted (getFile resolves to null).
+  // `undefined` means the query is still loading, so only act on an explicit null.
+  useEffect(() => {
+    if (activeTabId && activeFile === null) {
+      closeTab(activeTabId);
+    }
+  }, [activeTabId, activeFile, closeTab]);
 
   // Cleanup pending debounce timer on unmount or file change
   useEffect(() => {
