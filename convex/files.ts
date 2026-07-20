@@ -31,7 +31,7 @@ export const getFile = query({
     const file = await ctx.db.get("files", args.id);
 
     if (!file) {
-      throw new Error("File not found");
+      return null;
     }
 
     const project = await ctx.db.get("projects", file.projectId);
@@ -80,7 +80,9 @@ export const getFilePath = query({
     let currentId: Id<"files"> | undefined = args.fileId;
 
     while (currentId) {
-      const file = (await ctx.db.get("files", currentId)) as Doc<"files"> | undefined;
+      const file = (await ctx.db.get("files", currentId)) as
+        | Doc<"files">
+        | undefined;
       if (!file) break;
 
       path.unshift({ _id: file._id, name: file.name });
@@ -356,7 +358,6 @@ export const deleteFile = mutation({
 
       // Delete the files/folder itself
       await ctx.db.delete("files", fileId);
-
     };
 
     await deleteRecursive(args.id);
@@ -396,4 +397,4 @@ export const updateFile = mutation({
     });
     await ctx.db.patch("projects", file.projectId, { updatedAt: now });
   },
-})
+});
