@@ -130,7 +130,7 @@ export const ConversationSidebar = ({ projectId }: ConversationSidebarProps) => 
             </Button>
           </div>
         </div>
-         <Conversation className="flex-1">
+        <Conversation className="flex-1">
           <ConversationContent>
             {conversationMessages?.map((message, messageIndex) => (
               <Message
@@ -171,14 +171,14 @@ export const ConversationSidebar = ({ projectId }: ConversationSidebarProps) => 
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
-         <div className="p-3">
-          <PromptInput 
+        <div className="p-3">
+          <PromptInput
             onSubmit={handleSubmit}
             className="mt-2"
           >
             <PromptInputBody>
               <PromptInputTextarea
-                placeholder="Ask Polaris anything..."
+                placeholder="Ask Cursor anything..."
                 onChange={(e) => setInput(e.target.value)}
                 value={input}
                 disabled={isProcessing}
