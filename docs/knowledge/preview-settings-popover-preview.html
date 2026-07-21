@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PreviewSettingsPopover — visual mock</title>
+    <style>
+      /* shadcn/ui-ish design tokens (light theme) */
+      :root {
+        --background: #ffffff;
+        --foreground: #0a0a0a;
+        --muted-foreground: #737373;
+        --border: #e5e5e5;
+        --input: #e5e5e5;
+        --ring: #a3a3a3;
+        --primary: #171717;
+        --primary-foreground: #fafafa;
+        --accent: #f5f5f5;
+        --radius: 8px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fafafa;
+        color: var(--foreground);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      /* A fake toolbar so the gear button has context, like in the preview pane */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 4px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--background);
+        position: relative;
+      }
+      .toolbar .url {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        padding: 0 8px;
+        min-width: 220px;
+      }
+
+      /* Ghost icon button (the SettingsIcon trigger) */
+      .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 36px;
+        width: 36px;
+        border: none;
+        background: transparent;
+        color: var(--foreground);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .btn-ghost:hover { background: var(--accent); }
+      .btn-ghost svg { width: 15px; height: 15px; }
+
+      /* Popover content */
+      .popover {
+        position: absolute;
+        top: 44px;
+        right: 0;
+        width: 320px; /* w-80 */
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+        padding: 16px;
+        animation: pop 120ms ease-out;
+      }
+      @keyframes pop {
+        from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      .stack { display: flex; flex-direction: column; gap: 16px; }
+      .header h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+      .header p { margin: 0; font-size: 12px; color: var(--muted-foreground); }
+
+      .field { display: flex; flex-direction: column; gap: 6px; }
+      .field label { font-size: 13px; font-weight: 500; }
+      .field .desc { font-size: 12px; color: var(--muted-foreground); }
+      .input {
+        height: 36px;
+        border: 1px solid var(--input);
+        border-radius: 6px;
+        padding: 0 10px;
+        font-size: 13px;
+        outline: none;
+        background: var(--background);
+      }
+      .input::placeholder { color: #a3a3a3; }
+      .input:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgba(163, 163, 163, 0.25); }
+
+      /* Primary submit button */
+      .btn-primary {
+        width: 100%;
+        height: 34px;
+        border: none;
+        border-radius: 6px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .hint {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <span class="url">localhost:3000 — preview</span>
+
+      <!-- Trigger: ghost button with the gear (SettingsIcon) -->
+      <button class="btn-ghost" id="trigger" title="Preview Settings" aria-label="Preview Settings">
+        <!-- lucide settings icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+
+      <!-- Popover content (open by default so you can see it) -->
+      <div class="popover" id="popover">
+        <form onsubmit="return false" class="stack">
+          <div class="header">
+            <h4>Preview Settings</h4>
+            <p>Configure how your project runs in the preview.</p>
+          </div>
+
+          <div class="field">
+            <label for="install">Install Command</label>
+            <input class="input" id="install" placeholder="npm install" />
+            <span class="desc">The command to install dependencies</span>
+          </div>
+
+          <div class="field">
+            <label for="dev">Start Command</label>
+            <input class="input" id="dev" placeholder="npm run dev" />
+            <span class="desc">Command to start the development server</span>
+          </div>
+
+          <button class="btn-primary" type="submit">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
+    <p class="hint">Click the gear icon to toggle the popover.</p>
+
+    <script>
+      const trigger = document.getElementById("trigger");
+      const popover = document.getElementById("popover");
+      const toggle = () => {
+        popover.style.display = popover.style.display === "none" ? "block" : "none";
+      };
+      trigger.addEventListener("click", toggle);
+      // click-outside to close, like Radix
+      document.addEventListener("click", (e) => {
+        if (!popover.contains(e.target) && !trigger.contains(e.target)) {
+          popover.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>
