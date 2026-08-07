@@ -22,7 +22,7 @@ export const useCreateProject = () => {
   const id = crypto.randomUUID() as Id<"projects">;
 
   return useMutation(api.projects.create).withOptimisticUpdate(
-    (localStorage, args) => {
+    (localStorage, args) => { // convex in memory query cache
       const existingProjects = localStorage.getQuery(api.projects.get);
 
       if (existingProjects !== undefined) {
