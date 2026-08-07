@@ -59,11 +59,21 @@ export const ExportPopover = ({ projectId }: ExportPopoverProps) => {
       } catch (error) {
         if (error instanceof HTTPError) {
           // The error response may have an empty or non-JSON body (e.g. an unhandled 500)
-          const body = await error.response
-            .json<{ error?: string }>()
-            .catch(() => null);
-          if (body?.error?.toLowerCase().includes("github")) {
-            toast.error("Github account not connected", {
+          const body = await error.response.json<{ error?: string }>();
+          
+          if (body.error?.includes("Pro plan required")) {
+            toast.error("Upgrade to import repositories", {
+              action: {
+                label: "Upgrade",
+                onClick: () => openUserProfile(),
+              },
+            });
+            setOpen(false);
+            return;
+          }
+          
+          if (body?.error?.toLowerCase().includes("github not connected")) {
+            toast.error("GitHub account not connected", {
               action: {
                 label: "Connect",
                 onClick: () => openUserProfile(),
