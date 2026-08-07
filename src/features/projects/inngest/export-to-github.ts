@@ -17,8 +17,10 @@ interface ExportToGithubEvent {
 type FileWithUrl = Doc<"files"> & { storageUrl: string | null };
 
 export const exportToGithub = inngest.createFunction(
-  { // config
+  {
+    // config
     id: "export-to-github",
+    triggers: { event: "github/export.repo" },
     cancelOn: [
       {
         event: "github/export.cancel",
@@ -38,10 +40,6 @@ export const exportToGithub = inngest.createFunction(
         });
       });
     },
-  },
-  {
-    // Trigger
-    event: "github/export.repo",
   },
   async ({ event, step }) => {
     const { projectId, repoName, visibility, description, githubToken } =
@@ -233,6 +231,6 @@ export const exportToGithub = inngest.createFunction(
       success: true,
       repoUrl: repo.html_url,
       filesExported: treeItems.length,
-    }
+    };
   },
 );
